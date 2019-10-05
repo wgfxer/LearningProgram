@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">LearningProgram</string>
+    <string name="all">Все</string>
+    <string name="toolbar_title">Программа курса</string>
+    <string name="settingsMenuItem">Настройки</string>
+    <string-array name="weeksVariants">
+        <item>Без группировки</item>
+        <item>Группировать по неделям</item>
+    </string-array>
+</resources>
