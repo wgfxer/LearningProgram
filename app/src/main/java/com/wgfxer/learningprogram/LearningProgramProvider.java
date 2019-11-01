@@ -1,68 +1,158 @@
 package com.wgfxer.learningprogram;
 
+import android.os.AsyncTask;
+import android.util.Log;
+
 import com.wgfxer.learningprogram.models.Lecture;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TimeZone;
+import java.util.concurrent.ExecutionException;
 
-public class LearningProgramProvider {
-    private List<Lecture> lectures = Arrays.asList(
-            new Lecture("1","24.09.2019","Вводное занятие","Соколов"),
-            new Lecture("2","26.09.2019","View, Layouts","Соколов"),
-            new Lecture("3","28.09.2019","Drawables","Соколов"),
-            new Lecture("4","01.10.2019","Activity","Сафарян"),
-            new Lecture("5","03.10.2019","Адаптеры","Чумак"),
-            new Lecture("6","05.10.2019","UI: практика","Кудрявцев"),
-            new Lecture("7","08.10.2019","Custom View","Кудрявцев"),
-            new Lecture("8","10.10.2019","Touch events","Бильчук"),
-            new Lecture("9","12.10.2019","Сложные жесты","Соколов"),
-            new Lecture("10","15.10.2019","Layout & Measurement","Кудрявцев"),
-            new Lecture("11","17.10.2019","Custom ViewGroup","Кудрявцев"),
-            new Lecture("12","19.10.2019","Анимации","Чумак"),
-            new Lecture("13","22.10.2019","Практика View","Соколов"),
-            new Lecture("14","24.10.2019","Фрагменты: база","Бильчук"),
-            new Lecture("15","26.10.2019","Фрагменты: практика","Соколов"),
-            new Lecture("16","29.10.2019","Фоновая работа","Чумак"),
-            new Lecture("17","31.10.2019","Абстракции фон/UI","Леонидов"),
-            new Lecture("18","05.11.2019","Фон: практика","Чумак"),
-            new Lecture("19","07.11.2019","BroadcastReceiver","Бильчук"),
-            new Lecture("20","09.11.2019","Runtime permissions","Кудрявцев"),
-            new Lecture("21","12.11.2019","Service","Леонидов"),
-            new Lecture("22","14.11.2019","Service: практика","Леонидов"),
-            new Lecture("23","16.11.2019","Service: биндинг","Леонидов"),
-            new Lecture("24","19.11.2019","Preferences","Сафарян"),
-            new Lecture("25","21.11.2019","SQLite","Бильчук"),
-            new Lecture("26","23.11.2019","SQLite: Room","Соколов"),
-            new Lecture("27","26.11.2019","ContentProvider","Сафарян"),
-            new Lecture("28","28.11.2019","FileProvider","Соколов"),
-            new Lecture("29","30.11.2019","Геолокация","Леонидов"),
-            new Lecture("30","03.12.2019","Material","Чумак"),
-            new Lecture("31","05.12.2019","UI-тесты","Сафарян"),
-            new Lecture("32","07.12.2019","Финал","Соколов")
-    );
+class LearningProgramProvider {
+    private static final String URL = "https://landsovet.ru/learning_program.json";
+    private List<Lecture> lectures = new ArrayList<>();
+    private static final String NUMBER_KEY = "number";
+    private static final String DATE_KEY = "date";
+    private static final String THEME_KEY = "theme";
+    private static final String LECTOR_KEY = "lector";
+    private static final String SUBTOPICS_KEY = "subtopics";
 
-    public List<Lecture> provideLectures(){
+    private static SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+
+
+    List<Lecture> getUpdatedLectures() {
+        List<Lecture> lecturesFromJSON = new ArrayList<>();
+        try {
+            JSONArray jsonArray = new JSONLoadTask().execute().get();
+            if (jsonArray != null) {
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObjectLecture = jsonArray.getJSONObject(i);
+                    int number = jsonObjectLecture.getInt(NUMBER_KEY);
+                    String date = jsonObjectLecture.getString(DATE_KEY);
+                    String theme = jsonObjectLecture.getString(THEME_KEY);
+                    String lector = jsonObjectLecture.getString(LECTOR_KEY);
+                    JSONArray subtopicsJSONArray = jsonObjectLecture.getJSONArray(SUBTOPICS_KEY);
+                    String[] subtopics = new String[subtopicsJSONArray.length()];
+                    for (int j = 0; j < subtopicsJSONArray.length(); j++) {
+                        subtopics[j] = subtopicsJSONArray.getString(j);
+                    }
+                    Lecture lecture = new Lecture(number, date, theme, lector, subtopics);
+                    lecturesFromJSON.add(lecture);
+                }
+            }
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        if (!lecturesFromJSON.isEmpty()) lectures = lecturesFromJSON;
         return lectures;
     }
 
-    public List<String> provideLectors(){
+    List<Lecture> getLectures() {
+        return lectures;
+    }
+
+    int getNumberOfNextLecture() {
+        int positionResult = 0;
+        for (Lecture lecture : lectures) {
+            if (isLecturePassed(lecture)) positionResult++;
+        }
+        return positionResult;
+    }
+
+    private boolean isLecturePassed(Lecture lecture) {
+        String lectureDateString = lecture.getDate();
+        Date lectureDate = null;
+        try {
+            lectureDate = dateFormat.parse(lectureDateString);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        Calendar calendarLecture = Calendar.getInstance();
+        calendarLecture.setTime(lectureDate);
+        switch (calendarLecture.get(Calendar.DAY_OF_WEEK) - 1) {
+            case 2:
+            case 4:
+                calendarLecture.set(Calendar.HOUR_OF_DAY, 18);
+                calendarLecture.set(Calendar.MINUTE, 30);
+                break;
+            case 6:
+                calendarLecture.set(Calendar.HOUR_OF_DAY, 13);
+                break;
+        }
+        calendarLecture.setTimeZone(TimeZone.getTimeZone("GMT+3"));
+        Calendar calendarNow = Calendar.getInstance();
+        calendarNow.setTimeZone(TimeZone.getTimeZone("GMT+3"));
+        Log.i("MYTAG", lecture.getTheme() + " " + calendarLecture.after(calendarNow));
+        return calendarLecture.before(calendarNow);
+    }
+
+    List<String> provideLectors() {
         Set<String> lectorsSet = new HashSet<>();
-        for(Lecture lecture : lectures){
+        for (Lecture lecture : lectures) {
             lectorsSet.add(lecture.getLector());
         }
         return new ArrayList<>(lectorsSet);
     }
 
-    public List<Lecture> filterBy(String lectorName){
+    List<Lecture> filterBy(String lectorName) {
         List<Lecture> result = new ArrayList<>();
-        for(Lecture lecture : lectures){
-            if(lecture.getLector().equals(lectorName)){
+        for (Lecture lecture : lectures) {
+            if (lecture.getLector().equals(lectorName)) {
                 result.add(lecture);
             }
         }
         return result;
+    }
+
+    private static class JSONLoadTask extends AsyncTask<Void, Void, JSONArray> {
+
+        @Override
+        protected JSONArray doInBackground(Void... voids) {
+            HttpURLConnection connection = null;
+            try {
+                java.net.URL url = new URL(URL);
+                connection = (HttpURLConnection) url.openConnection();
+                InputStream in = connection.getInputStream();
+                InputStreamReader inputStreamReader = new InputStreamReader(in);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String line;
+                StringBuilder builder = new StringBuilder();
+                while ((line = bufferedReader.readLine()) != null) {
+                    builder.append(line);
+                }
+                return new JSONArray(builder.toString());
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+            return null;
+        }
     }
 }

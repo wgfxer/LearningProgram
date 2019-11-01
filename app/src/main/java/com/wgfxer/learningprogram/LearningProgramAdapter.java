@@ -1,5 +1,6 @@
 package com.wgfxer.learningprogram;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,9 +9,7 @@ import android.widget.TextView;
 import com.wgfxer.learningprogram.models.Lecture;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -24,17 +23,28 @@ public class LearningProgramAdapter extends RecyclerView.Adapter<RecyclerView.Vi
 
     private List<Object> listItems;
 
+    private OnLectureClickListener onLectureClickListener;
+
+    interface OnLectureClickListener {
+        void onLectureClick(Lecture lecture);
+    }
+
+    void setOnLectureClickListener(OnLectureClickListener onLectureClickListener) {
+        this.onLectureClickListener = onLectureClickListener;
+    }
+
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         LayoutInflater inflater = LayoutInflater.from(parent.getContext());
-        if(viewType == WEEK_VIEW_TYPE){
+        if (viewType == WEEK_VIEW_TYPE) {
             return new WeekViewHolder(
-                    inflater.inflate(R.layout.item_week,parent,false)
+                    inflater.inflate(R.layout.item_week, parent, false)
             );
-        }else{
+        } else {
             return new LectureViewHolder(
-                    inflater.inflate(R.layout.item_lecture,parent,false)
+                    inflater.inflate(R.layout.item_lecture, parent, false),
+                    onLectureClickListener
             );
         }
     }
@@ -42,16 +52,13 @@ public class LearningProgramAdapter extends RecyclerView.Adapter<RecyclerView.Vi
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         Object listItem = listItems.get(position);
-        if(holder.getItemViewType() == WEEK_VIEW_TYPE){
-            WeekViewHolder weekViewHolder = (WeekViewHolder)holder;
-            weekViewHolder.week.setText(listItem.toString());
-        }else{
-            Lecture lecture = ((Lecture)listItem);
-            LectureViewHolder lectureViewHolder = (LectureViewHolder)holder;
-            lectureViewHolder.number.setText(lecture.getNumber());
-            lectureViewHolder.date.setText(lecture.getDate());
-            lectureViewHolder.theme.setText(lecture.getTheme());
-            lectureViewHolder.lector.setText(lecture.getLector());
+        if (holder.getItemViewType() == WEEK_VIEW_TYPE) {
+            WeekViewHolder weekViewHolder = (WeekViewHolder) holder;
+            weekViewHolder.bind(listItem.toString());
+        } else if (holder.getItemViewType() == LECTURE_VIEW_TYPE) {
+            Lecture lecture = ((Lecture) listItem);
+            LectureViewHolder lectureViewHolder = (LectureViewHolder) holder;
+            lectureViewHolder.bind(lecture);
         }
     }
 
@@ -62,18 +69,18 @@ public class LearningProgramAdapter extends RecyclerView.Adapter<RecyclerView.Vi
 
     @Override
     public int getItemViewType(int position) {
-        if(listItems.get(position) instanceof Lecture){
+        if (listItems.get(position) instanceof Lecture) {
             return LECTURE_VIEW_TYPE;
-        }else{
+        } else {
             return WEEK_VIEW_TYPE;
         }
     }
 
-    public void setLectures(List<Lecture> lectures, int modeOfGroup) {
-        if(modeOfGroup == WITHOUT_SORT){
+    void setLectures(List<Lecture> lectures, int modeOfGroup) {
+        if (modeOfGroup == WITHOUT_SORT) {
             listItems = new ArrayList<>();
             listItems.addAll(lectures);
-        }else{
+        } else {
             listItems = getListWithWeeks(lectures);
         }
         notifyDataSetChanged();
@@ -84,35 +91,57 @@ public class LearningProgramAdapter extends RecyclerView.Adapter<RecyclerView.Vi
         private final TextView date;
         private final TextView theme;
         private final TextView lector;
+        private OnLectureClickListener onLectureClickListener;
 
-        public LectureViewHolder(@NonNull View itemView) {
+        LectureViewHolder(@NonNull View itemView, OnLectureClickListener onLectureClickListener) {
             super(itemView);
             number = itemView.findViewById(R.id.number);
             date = itemView.findViewById(R.id.date);
             theme = itemView.findViewById(R.id.theme);
             lector = itemView.findViewById(R.id.lector);
+            this.onLectureClickListener = onLectureClickListener;
+        }
+
+        void bind(final Lecture lecture) {
+            number.setText(String.valueOf(lecture.getNumber()));
+            date.setText(lecture.getDate());
+            theme.setText(lecture.getTheme());
+            lector.setText(lecture.getLector());
+            itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (onLectureClickListener != null) {
+                        onLectureClickListener.onLectureClick(lecture);
+                        Log.i("MYTAG", "LISTENER1");
+                    }
+                }
+            });
         }
     }
 
-    public static class WeekViewHolder extends RecyclerView.ViewHolder{
-        private final TextView week;
+    public static class WeekViewHolder extends RecyclerView.ViewHolder {
+        private final TextView weekTextView;
 
-        public WeekViewHolder(@NonNull View itemView) {
+        WeekViewHolder(@NonNull View itemView) {
             super(itemView);
-            week = itemView.findViewById(R.id.text);
+            weekTextView = itemView.findViewById(R.id.text);
+        }
+
+        void bind(String week) {
+            weekTextView.setText(week);
         }
     }
 
-    List<Object> getListWithWeeks(List<Lecture> lectures){
+    List<Object> getListWithWeeks(List<Lecture> lectures) {
         List<Object> items = new ArrayList<>();
         items.addAll(lectures);
         int i = 0;
-        while(i<items.size()){
+        while (i < items.size()) {
             Lecture lecture = (Lecture) items.get(i);
-            int numberOfWeek = (Integer.parseInt(lecture.getNumber()) - 1) / 3 + 1;
+            int numberOfWeek = (lecture.getNumber() - 1) / 3 + 1;
             String textForWeek = "Неделя " + numberOfWeek;
-            if(!items.contains(textForWeek)) items.add(i,"Неделя " + numberOfWeek);
-            i+=2;
+            if (!items.contains(textForWeek)) items.add(i, "Неделя " + numberOfWeek);
+            i += 2;
         }
         return items;
     }
