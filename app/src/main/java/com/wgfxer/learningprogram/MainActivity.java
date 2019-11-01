@@ -17,7 +17,9 @@ public class MainActivity extends AppCompatActivity implements LearningProgramLi
         setContentView(R.layout.activity_main);
         LearningProgramListFragment learningProgramListFragment = new LearningProgramListFragment();
         fragmentManager = getSupportFragmentManager();
-        fragmentManager.beginTransaction().replace(R.id.main_activity_frame, learningProgramListFragment).commit();
+        if (fragmentManager.findFragmentById(R.id.main_activity_frame) == null) {
+            fragmentManager.beginTransaction().replace(R.id.main_activity_frame, learningProgramListFragment).commit();
+        }
     }
 
     @Override
