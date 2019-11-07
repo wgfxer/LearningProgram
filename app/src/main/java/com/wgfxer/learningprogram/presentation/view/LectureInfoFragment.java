@@ -1,4 +1,4 @@
-package com.wgfxer.learningprogram;
+package com.wgfxer.learningprogram.presentation.view;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -8,7 +8,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.wgfxer.learningprogram.models.Lecture;
+import com.wgfxer.learningprogram.R;
+import com.wgfxer.learningprogram.data.model.Lecture;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;

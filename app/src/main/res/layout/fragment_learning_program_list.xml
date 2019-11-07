@@ -35,10 +35,12 @@
         </RelativeLayout>
     </androidx.appcompat.widget.Toolbar>
 
-    <Spinner
-        android:id="@+id/spinner_weeks"
+    <CheckBox
+        android:id="@+id/group_by_weeks"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:text="@string/group_by_weeks_text"
+        android:checked="false" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/learning_program_recycler"

@@ -1,10 +1,12 @@
-package com.wgfxer.learningprogram;
+package com.wgfxer.learningprogram.presentation.view;
 
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
+
+import com.wgfxer.learningprogram.R;
 
 import java.util.List;
 
@@ -32,7 +34,7 @@ public class LectorSpinnerAdapter extends BaseAdapter {
 
     @Override
     public View getView(int i, View view, ViewGroup viewGroup) {
-        View itemView = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_lector,viewGroup,false);
+        View itemView = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_lector, viewGroup, false);
         TextView lectorNameTitle = itemView.findViewById(R.id.text);
         lectorNameTitle.setText(getItem(i));
         return itemView;
@@ -40,8 +42,8 @@ public class LectorSpinnerAdapter extends BaseAdapter {
 
     @Override
     public View getDropDownView(int position, View convertView, ViewGroup parent) {
-        if(convertView == null){
-            convertView = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_1,parent,false);
+        if (convertView == null) {
+            convertView = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_1, parent, false);
             ViewHolder viewHolder = new ViewHolder(convertView);
             convertView.setTag(viewHolder);
         }
@@ -50,10 +52,10 @@ public class LectorSpinnerAdapter extends BaseAdapter {
         return convertView;
     }
 
-    private class ViewHolder{
+    private class ViewHolder {
         private final TextView lectorName;
 
-        private ViewHolder(View view){
+        private ViewHolder(View view) {
             lectorName = view.findViewById(android.R.id.text1);
         }
     }

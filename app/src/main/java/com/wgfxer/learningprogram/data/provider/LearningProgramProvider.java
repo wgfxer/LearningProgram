@@ -1,9 +1,9 @@
-package com.wgfxer.learningprogram;
+package com.wgfxer.learningprogram.data.provider;
 
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.wgfxer.learningprogram.models.Lecture;
+import com.wgfxer.learningprogram.data.model.Lecture;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -26,9 +26,9 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
 
-class LearningProgramProvider {
+public class LearningProgramProvider {
     private static final String URL = "https://landsovet.ru/learning_program.json";
-    private List<Lecture> lectures = new ArrayList<>();
+    private List<Lecture> lectures;
     private static final String NUMBER_KEY = "number";
     private static final String DATE_KEY = "date";
     private static final String THEME_KEY = "theme";
@@ -38,7 +38,7 @@ class LearningProgramProvider {
     private static SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
 
 
-    List<Lecture> getUpdatedLectures() {
+    private List<Lecture> getUpdatedLectures() {
         List<Lecture> lecturesFromJSON = new ArrayList<>();
         try {
             JSONArray jsonArray = new JSONLoadTask().execute().get();
@@ -69,12 +69,14 @@ class LearningProgramProvider {
         return lectures;
     }
 
-    List<Lecture> getLectures() {
-        return lectures;
+    public List<Lecture> getLectures() {
+        if (lectures == null) return getUpdatedLectures();
+        else return lectures;
     }
 
-    int getNumberOfNextLecture() {
+    public int getNumberOfNextLecture() {
         int positionResult = 0;
+        if (lectures == null) lectures = getUpdatedLectures();
         for (Lecture lecture : lectures) {
             if (isLecturePassed(lecture)) positionResult++;
         }
@@ -104,26 +106,41 @@ class LearningProgramProvider {
         calendarLecture.setTimeZone(TimeZone.getTimeZone("GMT+3"));
         Calendar calendarNow = Calendar.getInstance();
         calendarNow.setTimeZone(TimeZone.getTimeZone("GMT+3"));
-        Log.i("MYTAG", lecture.getTheme() + " " + calendarLecture.after(calendarNow));
         return calendarLecture.before(calendarNow);
     }
 
-    List<String> provideLectors() {
+    public List<String> provideLectors() {
         Set<String> lectorsSet = new HashSet<>();
+        if (lectures == null) lectures = getUpdatedLectures();
         for (Lecture lecture : lectures) {
             lectorsSet.add(lecture.getLector());
         }
         return new ArrayList<>(lectorsSet);
     }
 
-    List<Lecture> filterBy(String lectorName) {
+    public List<Lecture> filterBy(String lectorName) {
         List<Lecture> result = new ArrayList<>();
+        lectures = getLectures();
         for (Lecture lecture : lectures) {
             if (lecture.getLector().equals(lectorName)) {
                 result.add(lecture);
             }
         }
         return result;
+    }
+
+    public static List<Object> addWeeksInLectures(List<Lecture> lectures) {
+        List<Object> items = new ArrayList<>();
+        items.addAll(lectures);
+        int i = 0;
+        while (i < items.size()) {
+            Lecture lecture = (Lecture) items.get(i);
+            int numberOfWeek = (lecture.getNumber() - 1) / 3 + 1;
+            String textForWeek = "Неделя " + numberOfWeek;
+            if (!items.contains(textForWeek)) items.add(i, "Неделя " + numberOfWeek);
+            i += 2;
+        }
+        return items;
     }
 
     private static class JSONLoadTask extends AsyncTask<Void, Void, JSONArray> {

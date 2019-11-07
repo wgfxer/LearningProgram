@@ -1,7 +1,9 @@
-package com.wgfxer.learningprogram.models;
+package com.wgfxer.learningprogram.data.model;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+
+import java.util.Arrays;
 
 public class Lecture implements Parcelable {
     private final int number;
@@ -18,7 +20,7 @@ public class Lecture implements Parcelable {
         this.subtopics = subtopics;
     }
 
-    protected Lecture(Parcel in) {
+    private Lecture(Parcel in) {
         number = in.readInt();
         date = in.readString();
         theme = in.readString();
@@ -70,5 +72,30 @@ public class Lecture implements Parcelable {
         parcel.writeString(theme);
         parcel.writeString(lector);
         parcel.writeStringArray(subtopics);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Lecture lecture = (Lecture) o;
+
+        if (number != lecture.number) return false;
+        if (date != null ? !date.equals(lecture.date) : lecture.date != null) return false;
+        if (theme != null ? !theme.equals(lecture.theme) : lecture.theme != null) return false;
+        if (lector != null ? !lector.equals(lecture.lector) : lecture.lector != null) return false;
+        // Probably incorrect - comparing Object[] arrays with Arrays.equals
+        return Arrays.equals(subtopics, lecture.subtopics);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = number;
+        result = 31 * result + (date != null ? date.hashCode() : 0);
+        result = 31 * result + (theme != null ? theme.hashCode() : 0);
+        result = 31 * result + (lector != null ? lector.hashCode() : 0);
+        result = 31 * result + Arrays.hashCode(subtopics);
+        return result;
     }
 }

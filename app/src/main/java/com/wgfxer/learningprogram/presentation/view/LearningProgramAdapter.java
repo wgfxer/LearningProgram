@@ -1,4 +1,4 @@
-package com.wgfxer.learningprogram;
+package com.wgfxer.learningprogram.presentation.view;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -6,7 +6,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.wgfxer.learningprogram.models.Lecture;
+import com.wgfxer.learningprogram.R;
+import com.wgfxer.learningprogram.data.model.Lecture;
+import com.wgfxer.learningprogram.data.provider.LearningProgramProvider;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +17,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 public class LearningProgramAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-    static final int WITHOUT_SORT = 0;
-    static final int SORT_BY_WEEKS = 1;
 
     private static final int WEEK_VIEW_TYPE = 0;
     private static final int LECTURE_VIEW_TYPE = 1;
@@ -76,12 +76,12 @@ public class LearningProgramAdapter extends RecyclerView.Adapter<RecyclerView.Vi
         }
     }
 
-    void setLectures(List<Lecture> lectures, int modeOfGroup) {
-        if (modeOfGroup == WITHOUT_SORT) {
+    void setLectures(List<Lecture> lectures, boolean withSort) {
+        if (!withSort) {
             listItems = new ArrayList<>();
             listItems.addAll(lectures);
         } else {
-            listItems = getListWithWeeks(lectures);
+            listItems = LearningProgramProvider.addWeeksInLectures(lectures);
         }
         notifyDataSetChanged();
     }
@@ -132,17 +132,5 @@ public class LearningProgramAdapter extends RecyclerView.Adapter<RecyclerView.Vi
         }
     }
 
-    List<Object> getListWithWeeks(List<Lecture> lectures) {
-        List<Object> items = new ArrayList<>();
-        items.addAll(lectures);
-        int i = 0;
-        while (i < items.size()) {
-            Lecture lecture = (Lecture) items.get(i);
-            int numberOfWeek = (lecture.getNumber() - 1) / 3 + 1;
-            String textForWeek = "Неделя " + numberOfWeek;
-            if (!items.contains(textForWeek)) items.add(i, "Неделя " + numberOfWeek);
-            i += 2;
-        }
-        return items;
-    }
+
 }
