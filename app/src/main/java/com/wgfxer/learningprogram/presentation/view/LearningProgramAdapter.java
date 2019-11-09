@@ -1,6 +1,5 @@
 package com.wgfxer.learningprogram.presentation.view;
 
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,9 +7,7 @@ import android.widget.TextView;
 
 import com.wgfxer.learningprogram.R;
 import com.wgfxer.learningprogram.data.model.Lecture;
-import com.wgfxer.learningprogram.data.provider.LearningProgramProvider;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import androidx.annotation.NonNull;
@@ -76,13 +73,8 @@ public class LearningProgramAdapter extends RecyclerView.Adapter<RecyclerView.Vi
         }
     }
 
-    void setLectures(List<Lecture> lectures, boolean withSort) {
-        if (!withSort) {
-            listItems = new ArrayList<>();
-            listItems.addAll(lectures);
-        } else {
-            listItems = LearningProgramProvider.addWeeksInLectures(lectures);
-        }
+    void setLectures(List<Object> lectures) {
+        listItems = lectures;
         notifyDataSetChanged();
     }
 
@@ -112,7 +104,6 @@ public class LearningProgramAdapter extends RecyclerView.Adapter<RecyclerView.Vi
                 public void onClick(View view) {
                     if (onLectureClickListener != null) {
                         onLectureClickListener.onLectureClick(lecture);
-                        Log.i("MYTAG", "LISTENER1");
                     }
                 }
             });

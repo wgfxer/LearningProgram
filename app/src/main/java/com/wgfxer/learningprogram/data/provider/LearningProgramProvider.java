@@ -1,7 +1,6 @@
 package com.wgfxer.learningprogram.data.provider;
 
 import android.os.AsyncTask;
-import android.util.Log;
 
 import com.wgfxer.learningprogram.data.model.Lecture;
 
@@ -24,7 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.concurrent.ExecutionException;
 
 public class LearningProgramProvider {
     private static final String URL = "https://landsovet.ru/learning_program.json";
@@ -38,45 +36,42 @@ public class LearningProgramProvider {
     private static SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
 
 
-    private List<Lecture> getUpdatedLectures() {
-        List<Lecture> lecturesFromJSON = new ArrayList<>();
-        try {
-            JSONArray jsonArray = new JSONLoadTask().execute().get();
-            if (jsonArray != null) {
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsonObjectLecture = jsonArray.getJSONObject(i);
-                    int number = jsonObjectLecture.getInt(NUMBER_KEY);
-                    String date = jsonObjectLecture.getString(DATE_KEY);
-                    String theme = jsonObjectLecture.getString(THEME_KEY);
-                    String lector = jsonObjectLecture.getString(LECTOR_KEY);
-                    JSONArray subtopicsJSONArray = jsonObjectLecture.getJSONArray(SUBTOPICS_KEY);
-                    String[] subtopics = new String[subtopicsJSONArray.length()];
-                    for (int j = 0; j < subtopicsJSONArray.length(); j++) {
-                        subtopics[j] = subtopicsJSONArray.getString(j);
-                    }
-                    Lecture lecture = new Lecture(number, date, theme, lector, subtopics);
-                    lecturesFromJSON.add(lecture);
-                }
-            }
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        if (!lecturesFromJSON.isEmpty()) lectures = lecturesFromJSON;
-        return lectures;
+    public void loadLectures(OnLoadingFinishedListener listener) {
+        LoadLecturesTask task = new LoadLecturesTask(listener);
+        task.execute();
     }
 
     public List<Lecture> getLectures() {
-        if (lectures == null) return getUpdatedLectures();
-        else return lectures;
+        return lectures;
+    }
+
+    public List<Object> filterBy(String lectorName, boolean groupByWeeks) {
+        List<Lecture> result = new ArrayList<>();
+        if (lectorName != null) {
+            for (Lecture lecture : lectures) {
+                if (lecture.getLector().equals(lectorName)) {
+                    result.add(lecture);
+                }
+            }
+        } else {
+            result = lectures;
+        }
+        return getListWithWeeks(result, groupByWeeks);
+    }
+
+    List<Object> getListWithWeeks(List<Lecture> lectures, boolean groupByWeeks) {
+        List<Object> listObjects;
+        if (!groupByWeeks) {
+            listObjects = new ArrayList<>();
+            listObjects.addAll(lectures);
+        } else {
+            listObjects = addWeeksInLectures(lectures);
+        }
+        return listObjects;
     }
 
     public int getNumberOfNextLecture() {
         int positionResult = 0;
-        if (lectures == null) lectures = getUpdatedLectures();
         for (Lecture lecture : lectures) {
             if (isLecturePassed(lecture)) positionResult++;
         }
@@ -111,25 +106,13 @@ public class LearningProgramProvider {
 
     public List<String> provideLectors() {
         Set<String> lectorsSet = new HashSet<>();
-        if (lectures == null) lectures = getUpdatedLectures();
         for (Lecture lecture : lectures) {
             lectorsSet.add(lecture.getLector());
         }
         return new ArrayList<>(lectorsSet);
     }
 
-    public List<Lecture> filterBy(String lectorName) {
-        List<Lecture> result = new ArrayList<>();
-        lectures = getLectures();
-        for (Lecture lecture : lectures) {
-            if (lecture.getLector().equals(lectorName)) {
-                result.add(lecture);
-            }
-        }
-        return result;
-    }
-
-    public static List<Object> addWeeksInLectures(List<Lecture> lectures) {
+    public List<Object> addWeeksInLectures(List<Lecture> lectures) {
         List<Object> items = new ArrayList<>();
         items.addAll(lectures);
         int i = 0;
@@ -143,33 +126,79 @@ public class LearningProgramProvider {
         return items;
     }
 
-    private static class JSONLoadTask extends AsyncTask<Void, Void, JSONArray> {
+
+    private class LoadLecturesTask extends AsyncTask<Void, Void, List<Lecture>> {
+        private final OnLoadingFinishedListener listener;
+
+        LoadLecturesTask(OnLoadingFinishedListener listener) {
+            this.listener = listener;
+        }
 
         @Override
-        protected JSONArray doInBackground(Void... voids) {
-            HttpURLConnection connection = null;
-            try {
-                java.net.URL url = new URL(URL);
-                connection = (HttpURLConnection) url.openConnection();
-                InputStream in = connection.getInputStream();
-                InputStreamReader inputStreamReader = new InputStreamReader(in);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                String line;
-                StringBuilder builder = new StringBuilder();
-                while ((line = bufferedReader.readLine()) != null) {
-                    builder.append(line);
-                }
-                return new JSONArray(builder.toString());
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
+        protected List<Lecture> doInBackground(Void... voids) {
+            return getLecturesFromJSON(getJSONFromNetwork());
+        }
+
+        @Override
+        protected void onPostExecute(List<Lecture> result) {
+            super.onPostExecute(result);
+            lectures = result;
+            listener.onLoadingFinished(result);
+        }
+    }
+
+    private JSONArray getJSONFromNetwork() {
+        HttpURLConnection connection = null;
+        try {
+            java.net.URL url = new URL(URL);
+            connection = (HttpURLConnection) url.openConnection();
+            InputStream in = connection.getInputStream();
+            InputStreamReader inputStreamReader = new InputStreamReader(in);
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            String line;
+            StringBuilder builder = new StringBuilder();
+            while ((line = bufferedReader.readLine()) != null) {
+                builder.append(line);
+            }
+            return new JSONArray(builder.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+        return null;
+    }
+
+    private List<Lecture> getLecturesFromJSON(JSONArray jsonArray) {
+        List<Lecture> lecturesFromJSON = new ArrayList<>();
+        try {
+            if (jsonArray != null) {
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObjectLecture = jsonArray.getJSONObject(i);
+                    int number = jsonObjectLecture.getInt(NUMBER_KEY);
+                    String date = jsonObjectLecture.getString(DATE_KEY);
+                    String theme = jsonObjectLecture.getString(THEME_KEY);
+                    String lector = jsonObjectLecture.getString(LECTOR_KEY);
+                    JSONArray subtopicsJSONArray = jsonObjectLecture.getJSONArray(SUBTOPICS_KEY);
+                    String[] subtopics = new String[subtopicsJSONArray.length()];
+                    for (int j = 0; j < subtopicsJSONArray.length(); j++) {
+                        subtopics[j] = subtopicsJSONArray.getString(j);
+                    }
+                    Lecture lecture = new Lecture(number, date, theme, lector, subtopics);
+                    lecturesFromJSON.add(lecture);
                 }
             }
-            return null;
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
+        return lecturesFromJSON;
+    }
+
+    public interface OnLoadingFinishedListener {
+        void onLoadingFinished(List<Lecture> lectures);
     }
 }

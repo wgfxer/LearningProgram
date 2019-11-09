@@ -2,12 +2,12 @@ package com.wgfxer.learningprogram.presentation.view;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.CheckBox;
+import android.widget.FrameLayout;
 import android.widget.Spinner;
 
 import com.wgfxer.learningprogram.R;
@@ -29,16 +29,19 @@ public class LearningProgramListFragment extends Fragment implements LearningPro
     private static final int POSITION_ALL = 0;
 
     private View view;
-    private RecyclerView recyclerView;
-
-    private LearningProgramListHolder learningProgramListHolder;
-
-    private Spinner spinnerLectors;
 
     private LearningProgramListPresenter presenter;
 
+    private RecyclerView recyclerView;
+    private LearningProgramListHolder learningProgramListHolder;
+    private LearningProgramAdapter learningProgramAdapter;
+
+    private LectorSpinnerAdapter spinnerAdapter;
+
     private boolean groupByWeeks = false;
     private String lectorName;
+
+    private FrameLayout progressBarFrame;
 
 
     @Override
@@ -51,32 +54,54 @@ public class LearningProgramListFragment extends Fragment implements LearningPro
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        setRetainInstance(true);
         view = inflater.inflate(R.layout.fragment_learning_program_list, container, false);
         presenter = new LearningProgramListPresenter(this, new LearningProgramProvider());
         initViews();
-        presenter.loadLectures();
-        presenter.loadLectors();
-        presenter.scrollToNextLecture();  //почему-то после этого все равно возвращается на 0 позицию,если не использовать хендлер
+        presenter.loadDataAsync(lectorName, groupByWeeks);
         return view;
     }
 
     private void initViews() {
         recyclerView = view.findViewById(R.id.learning_program_recycler);
-        spinnerLectors = view.findViewById(R.id.lectors_spinner);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getContext());
         recyclerView.setLayoutManager(linearLayoutManager);
+        learningProgramAdapter = new LearningProgramAdapter();
+        learningProgramAdapter.setOnLectureClickListener(this);
+        recyclerView.setAdapter(learningProgramAdapter);
+
+        Spinner spinnerLectors = view.findViewById(R.id.lectors_spinner);
+        if (spinnerAdapter == null) {                         //проверка, чтобы спиннерАдаптер не создавался заново, чтобы можно было проверить
+            spinnerAdapter = new LectorSpinnerAdapter();    //равны ли загруженные лекции и те что в адаптере
+        }
+        spinnerLectors.setAdapter(spinnerAdapter);
+        spinnerLectors.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                if (i == POSITION_ALL) {
+                    lectorName = null;
+                } else {
+                    lectorName = spinnerAdapter.getItem(i);
+                }
+                presenter.loadDataAsync(lectorName, groupByWeeks);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+
         final CheckBox groupByWeeksCheckBox = view.findViewById(R.id.group_by_weeks);
         groupByWeeksCheckBox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 groupByWeeks = groupByWeeksCheckBox.isChecked();
-                if (lectorName == null) {
-                    presenter.loadLectures();
-                } else {
-                    presenter.loadLectures(lectorName);
-                }
+                presenter.loadDataAsync(lectorName, groupByWeeks);
             }
         });
+
+        progressBarFrame = view.findViewById(R.id.progress_bar_frame);
     }
 
     @Override
@@ -87,45 +112,31 @@ public class LearningProgramListFragment extends Fragment implements LearningPro
     }
 
     @Override
-    public void showLectures(List<Lecture> lectures) {
-        LearningProgramAdapter adapter = new LearningProgramAdapter();
-        adapter.setOnLectureClickListener(this);
-        recyclerView.setAdapter(adapter);
-        adapter.setLectures(lectures, groupByWeeks);
+    public void showLectures(List<Object> lectures) {
+        learningProgramAdapter.setLectures(lectures);
     }
 
     @Override
-    public void showLectors(List<String> lectors) {
+    public void showLectors(@NonNull List<String> lectors) {
         lectors.add(POSITION_ALL, getResources().getString(R.string.all));
-        LectorSpinnerAdapter spinnerAdapter = new LectorSpinnerAdapter(lectors);
-        spinnerLectors.setAdapter(spinnerAdapter);
-        spinnerLectors.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                if (i == POSITION_ALL) {
-                    lectorName = null;
-                    presenter.loadLectures();
-                } else {
-                    lectorName = spinnerLectors.getSelectedItem().toString();
-                    presenter.loadLectures(lectorName);
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
-        });
+        if (!lectors.equals(spinnerAdapter.getLectors())) {  //если убрать проверку,то всегда будут ставиться лекторы спиннеры и у него будет вызываться
+            spinnerAdapter.setLectors(lectors);            //onItemSelectedListener и lectorName будет присваиваться null и будет заново загрузка
+        }
     }
 
     @Override
-    public void scrollToLecture(final int position) {
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                recyclerView.scrollToPosition(position);
-            }
-        }, 200);
+    public void scrollToLecture(int position) {
+        recyclerView.scrollToPosition(position);
+    }
+
+    @Override
+    public void showLoad() {
+        progressBarFrame.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void hideLoad() {
+        progressBarFrame.setVisibility(View.GONE);
     }
 
     @Override
@@ -133,4 +144,6 @@ public class LearningProgramListFragment extends Fragment implements LearningPro
         super.onDestroyView();
         presenter.detachView();
     }
+
+
 }

@@ -1,7 +1,5 @@
 package com.wgfxer.learningprogram.presentation.presenter;
 
-import android.util.Log;
-
 import com.wgfxer.learningprogram.data.model.Lecture;
 import com.wgfxer.learningprogram.data.provider.LearningProgramProvider;
 import com.wgfxer.learningprogram.presentation.view.ILearningProgramList;
@@ -14,40 +12,35 @@ public class LearningProgramListPresenter {
     private WeakReference<ILearningProgramList> learningProgramListWeakReference;
     private LearningProgramProvider provider;
 
-
     public LearningProgramListPresenter(ILearningProgramList learningProgramList, LearningProgramProvider provider) {
         learningProgramListWeakReference = new WeakReference<>(learningProgramList);
         this.provider = provider;
     }
 
-    public void loadLectures() {
-        List<Lecture> lectures = provider.getLectures();
+    public void loadDataAsync(final String lectorName, final boolean groupByWeeks) {
         if (learningProgramListWeakReference.get() != null) {
-            learningProgramListWeakReference.get().showLectures(lectures);
+            learningProgramListWeakReference.get().showLoad();
         }
+
+        LearningProgramProvider.OnLoadingFinishedListener onLoadingFinishedListener = new LearningProgramProvider.OnLoadingFinishedListener() {
+            @Override
+            public void onLoadingFinished(List<Lecture> lectures) {
+                if (learningProgramListWeakReference.get() != null) {
+                    learningProgramListWeakReference.get().showLectures(provider.filterBy(lectorName, groupByWeeks));
+                    if (lectorName == null) {
+                        learningProgramListWeakReference.get().scrollToLecture(provider.getNumberOfNextLecture());
+                    }
+                    learningProgramListWeakReference.get().showLectors(provider.provideLectors());
+                    learningProgramListWeakReference.get().hideLoad();
+                }
+            }
+        };
+        provider.loadLectures(onLoadingFinishedListener);
     }
 
-    public void loadLectures(String lectorName) {
-        List<Lecture> lectures = provider.filterBy(lectorName);
-        if (learningProgramListWeakReference.get() != null) {
-            learningProgramListWeakReference.get().showLectures(lectures);
-        }
-    }
-
-    public void loadLectors() {
-        List<String> lectors = provider.provideLectors();
-        if (learningProgramListWeakReference.get() != null) {
-            learningProgramListWeakReference.get().showLectors(lectors);
-        }
-    }
-
-    public void scrollToNextLecture() {
-        if (learningProgramListWeakReference.get() != null) {
-            learningProgramListWeakReference.get().scrollToLecture(provider.getNumberOfNextLecture());
-        }
-    }
 
     public void detachView() {
         learningProgramListWeakReference.clear();
     }
+
 }

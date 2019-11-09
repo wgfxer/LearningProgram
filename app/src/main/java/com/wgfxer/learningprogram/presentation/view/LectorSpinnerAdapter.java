@@ -8,13 +8,23 @@ import android.widget.TextView;
 
 import com.wgfxer.learningprogram.R;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class LectorSpinnerAdapter extends BaseAdapter {
-    private final List<String> lectors;
+    private List<String> lectors;
 
-    public LectorSpinnerAdapter(List<String> lectors) {
+    public LectorSpinnerAdapter() {
+        this.lectors = new ArrayList<>();
+    }
+
+    public void setLectors(List<String> lectors) {
         this.lectors = lectors;
+        notifyDataSetChanged();
+    }
+
+    public List<String> getLectors() {
+        return lectors;
     }
 
     @Override
@@ -41,7 +51,7 @@ public class LectorSpinnerAdapter extends BaseAdapter {
     }
 
     @Override
-    public View getDropDownView(int position, View convertView, ViewGroup parent) {
+    public View getDropDownView(final int position, View convertView, ViewGroup parent) {
         if (convertView == null) {
             convertView = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_1, parent, false);
             ViewHolder viewHolder = new ViewHolder(convertView);
