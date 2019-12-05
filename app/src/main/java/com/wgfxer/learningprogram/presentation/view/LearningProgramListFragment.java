@@ -55,7 +55,7 @@ public class LearningProgramListFragment extends Fragment implements LearningPro
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         setRetainInstance(true);
-        view = inflater.inflate(R.layout.fragment_learning_program_list, container, false);
+        view = inflater.inflate(R.layout.fragment_learning_program_list_coordinator, container, false);
         presenter = new LearningProgramListPresenter(this, new LearningProgramProvider());
         initViews();
         presenter.loadDataAsync(lectorName, groupByWeeks);
